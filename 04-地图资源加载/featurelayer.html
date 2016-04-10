@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css"><style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script>
+        var map;
+        require([ "esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/layers/FeatureLayer",
+                    "esri/renderers/SimpleRenderer",
+                    "dojo/domReady!"],
+        function(Map, Tiled,FeatureLayer,SimpleRenderer){
+            map = new Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+            var ftchurl = "http://localhost:6080/arcgis/rest/services/china/MapServer/1";
+            var options = {
+                mode: FeatureLayer.MODE_ONDEMAND,
+                outFields: ["*"],
+                tileWidth: 256,
+                tileHeight: 256
+            };
+            var ftch = new FeatureLayer(ftchurl,options);
+            var simpleJson = {
+                "type": "simple",
+                "label": "",
+                "description": "",
+                "symbol": {
+                    "color": [0,0,255,150],
+                    "size": 12,
+                    "angle": 0,
+                    "xoffset": 0,
+                    "yoffset": 0,
+                    "type": "esriSMS",
+                    "style": "esriSMSCircle",
+                    "outline": {
+                        "color": [255,0,0,0],
+                        "width": 0,
+                        "type": "esriSLS",
+                        "style": "esriSLSSolid"
+                    }
+                }
+            };
+            var render = new SimpleRenderer(simpleJson);
+            ftch.setRenderer(render);
+            map.addLayer(ftch);
+            var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+            map.centerAndZoom(mapCenter, 1);
+        });
+    </script>
+</head>
+<body>
+<div id="map"></div>
+</body>
+</html>

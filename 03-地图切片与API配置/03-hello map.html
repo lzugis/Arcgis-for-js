@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css"><style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script>
+        var map;
+        require([ "esri/map","esri/layers/ArcGISTiledMapServiceLayer","dojo/domReady!"],
+        function(Map, Tiled){
+            map = new Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+        });
+    </script>
+</head>
+<body>
+<div id="map"></div>
+</body>
+</html>

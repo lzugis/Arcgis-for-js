@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hello Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css"><style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script>
+        var map;
+        require([ "esri/map","esri/layers/ArcGISDynamicMapServiceLayer","dojo/domReady!"],
+        function(Map, Dynamic){
+            map = new Map("map");
+            var dynamic = new Dynamic("http://localhost:6080/arcgis/rest/services/china/MapServer/");
+            map.addLayer(dynamic);
+            var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+            map.centerAndZoom(mapCenter, 1);
+        });
+    </script>
+</head>
+<body>
+<div id="map"></div>
+</body>
+</html>

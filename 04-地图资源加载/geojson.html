@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>Hello Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css"><style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script src="../lib/jsonConverters.js"></script>
+    <script>
+        var map;
+        require([ "esri/map",
+            "esri/layers/ArcGISTiledMapServiceLayer",
+            "esri/layers/GraphicsLayer",
+            "esri/symbols/SimpleMarkerSymbol",
+            "esri/symbols/SimpleLineSymbol",
+            "esri/renderers/SimpleRenderer",
+            "esri/Color",
+            "esri/geometry/Point",
+            "esri/graphic",
+            "dojo/domReady!"
+        ],
+        function(Map,
+            Tiled,
+            GraphicsLayer,
+            SimpleMarkerSymbol,
+            SimpleLineSymbol,
+            SimpleRenderer,
+            Color, Point, Graphic){
+            map = new Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+            var mapCenter = new Point(103.847, 36.0473, {"wkid":4326});
+            map.centerAndZoom(mapCenter,1);
+            var gLayer = new GraphicsLayer();
+            map.addLayer(gLayer);
+            map.on("load",function(){
+                $.get("../data/capital.geojson",null,function(result){
+                    result = eval("("+result+")");
+                    var jsonf = geoJsonConverter();
+                    var json = jsonf.toEsri(result);
+                    var features = json.features;
+                    for(var i=0;i<features.length;i++){
+                        var feature = features[i];
+                        feature.symbol = {"color":[0,0,255,200],
+                            "size":12,"angle":0,"xoffset":0,"yoffset":0,"type":"esriSMS","style":"esriSMSCircle",
+                            "outline":{"color":[0,0,0,255],"width":1,"type":"esriSLS","style":"esriSLSSolid"}};
+                        var graphic  = new Graphic(feature);
+                        gLayer.add(graphic);
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+<div id="map"></div>
+</body>
+</html>
