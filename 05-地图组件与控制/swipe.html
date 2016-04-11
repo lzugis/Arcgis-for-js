@@ -1,0 +1,63 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>Layer Swipe</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+	<script src="../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script>
+        var map;
+        require([
+            "esri/map",
+            "esri/layers/ArcGISTiledMapServiceLayer",
+            "esri/layers/FeatureLayer",
+            "esri/dijit/LayerSwipe",
+            "esri/arcgis/utils",
+            "dojo/_base/array",
+            "dojo/domReady!"
+        ], function(
+                Map,Tiled, FeatureLayer,
+                LayerSwipe, arcgisUtils, array
+        )  {
+            map = new Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+            var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+            map.centerAndZoom(mapCenter, 1);
+            var province  = new FeatureLayer("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer/6", {
+                mode: FeatureLayer.MODE_ONDEMAND,
+                outFields:["*"]
+            });
+            map.addLayer(province);
+            $("#swipebutton").on("click",function(){
+                var layerSwipe = new LayerSwipe({
+                    type: "vertical",//Try switching to "vertical" or "horizontal"
+                    right: 10,
+                    map: map,
+                    layers: [ province ]
+                }, "swipeDiv");
+                layerSwipe.startup();
+            });
+        });
+    </script>
+
+</head>
+<body>
+<div id="map" class="map">
+    <div style="position: absolute;top: 10px;right: 10px;z-index: 99;">
+        <button id="swipebutton">卷帘</button>
+    </div>
+    <div id="swipeDiv"></div>
+</div>
+</body>
+</html>

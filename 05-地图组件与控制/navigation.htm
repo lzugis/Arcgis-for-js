@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>navigationToolbar</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css" />
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css" />
+    <style type="text/css">
+        html, body, #map
+        {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+
+        }
+    </style>
+    <script type="text/javascript" src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script type="text/javascript">
+        var map;
+        var navToobar;
+        require(["esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/toolbars/navigation",
+                    "dojo/domReady!"],
+                function (Map, Tiled, Navigation) {
+                    map = new esri.Map("map");
+                    var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+                    map.addLayer(tiled);
+                    var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+                    map.centerAndZoom(mapCenter, 1);
+                    navToobar = new Navigation(map);
+                    navToobar.on("extent-history-change", extentHistoryChangeHandler);
+                    function extentHistoryChangeHandler() {
+                        document.getElementById("preview").disabled = navToobar.isFirstExtent();
+                        document.getElementById("nextview").disabled = navToobar.isLastExtent();
+
+                    }
+                });
+
+        function NavTool(id) {
+            switch (id) {
+                case "zoomin":
+                    navToobar.activate(esri.toolbars.Navigation.ZOOM_IN);
+                    break;
+                case "zoomout":
+                    navToobar.activate(esri.toolbars.Navigation.ZOOM_OUT);
+                    break;
+                case "pan":
+                    navToobar.activate(esri.toolbars.Navigation.PAN);
+                    break;
+                case "preview":
+                    navToobar.zoomToPrevExtent();
+                    break;
+                case "nextview":
+                    navToobar.zoomToNextExtent();
+                    break;
+                case "fullview":
+                    navToobar.zoomToFullExtent();
+                    break;
+            }
+        }
+    </script>
+</head>
+<body>
+<div id="map">
+    <div style="position: absolute;top: 10px;right: 10px;z-index: 99;">
+        <input id="zoomin" class="tools" type="button" value="拉框放大" onclick="NavTool(this.id)"  />
+        <input id="zoomout" class="tools" type="button" value="拉框缩小" onclick="NavTool(this.id)" />
+        <input id="pan" class="tools" type="button" value="平移" onclick="NavTool(this.id)"  />
+        <input id="preview" class="tools" type="button" value="前一视图" onclick="NavTool(this.id)" />
+        <input id="nextview" class="tools" type="button" value="后一视图" onclick="NavTool(this.id)" />
+        <input id="fullview" class="tools" type="button" value="全屏" onclick="NavTool(this.id)" />
+    </div>
+</div>
+</body>
+</html>

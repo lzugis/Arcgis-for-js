@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>鹰眼图</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css" />
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css" />
+    <style type="text/css">
+        html, body, #map
+        {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #overview
+        {
+            bottom: 0px;
+            right: 0px;
+            border: 2px solid red;
+            position: absolute;
+            height: 200px;
+            width: 250px;
+        }
+    </style>
+    <script type="text/javascript" src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script type="text/javascript">
+        var map;
+        require(["esri/map",
+                 "esri/layers/ArcGISTiledMapServiceLayer",
+                 "esri/dijit/OverviewMap",
+                 "dojo/domReady!"
+                ],
+        function (Map,
+                  Tiled,
+                  OverviewMap) {
+            map = new esri.Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+            var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+            map.centerAndZoom(mapCenter, 1);
+            var overviewMapDijit = new OverviewMap({
+                map: map,
+                attachTo: "bottom-right",
+                color: "#D84E13",
+                expandFactor: 2,
+                height: 200,
+                baseLayer: tiled
+            }, dojo.byId("overview"));
+            overviewMapDijit.startup();
+        });
+    </script>
+</head>
+<body>
+    <div id="map">
+        <div id="overview"></div>
+    </div>
+</body>
+</html>

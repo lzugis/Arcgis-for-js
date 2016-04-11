@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>鹰眼图</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style type="text/css">
+        html,body, #map {
+            height:100%;
+            width:100%;
+            margin:0;
+            padding:0;
+            overflow: hidden;
+        }
+        .map_legend{
+            border: 2px solid #ff0000;
+            width: 200px;
+            max-height: 150px;
+            overflow: auto;
+            z-index: 99;
+            position: absolute;
+            right: 40px;
+            bottom: 40px;
+            z-index: 99;
+            background: #fff;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script type="text/javascript">
+        var map;
+        require([
+            "esri/map","esri/layers/ArcGISTiledMapServiceLayer",
+            "esri/layers/FeatureLayer", "esri/dijit/Legend",
+            "dojo/_base/array", "dojo/parser","dojo/domReady!"
+        ], function(
+                Map, Tiled, FeatureLayer, Legend,
+                arrayUtils, parser
+        ) {
+            parser.parse();
+            map = new Map("map");
+            var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+            map.addLayer(tiled);
+            var mapCenter = new esri.geometry.Point(103.847, 36.0473, map.spatialReference);
+            map.centerAndZoom(mapCenter, 1);
+
+            var lake = new FeatureLayer("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer/2", {
+                mode: FeatureLayer.MODE_ONDEMAND,
+                outFields:["*"]
+            });
+            var railway  = new FeatureLayer("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer/4", {
+                mode: FeatureLayer.MODE_ONDEMAND,
+                outFields:["*"]
+            });
+            map.addLayers([lake, railway]);
+			//add the legend
+            map.on("layers-add-result", function (evt) {
+                var layerInfo = arrayUtils.map(evt.layers, function (layer, index) {
+                    return {layer:layer.layer, title:layer.layer.name};
+                });
+                if (layerInfo.length > 0) {
+                    var legendDijit = new Legend({
+                        map: map,
+                        layerInfos: layerInfo
+                    }, "legendDiv");
+                    legendDijit.startup();
+					$("#legendDiv").css("position","absolute");					
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+<div id="map"></div>
+<div id="legendDiv" class="map_legend" style="position: absolute;"></div>
+</body>
+</html>
