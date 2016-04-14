@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Simple Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #FFF;
+            overflow: hidden;
+            font-family: "Trebuchet MS";
+            font-size: 12px;
+        }
+        #map_ctrl{
+            z-index: 99;
+            position: absolute;
+            top: 20pt;
+            right: 10pt;
+            background: #fff;
+        }
+        .button{
+            padding: 3px;
+            background: #eee;
+            text-align: center;
+            font-size: 12px;
+            font-family: "微软雅黑";
+        }
+        .button:hover,.attr_ctrl:hover{
+            background: #ccc;
+            cursor: pointer;
+        }
+        #attr_ctrl{
+            z-index: 99;
+            width: 155px;
+            position:absolute;
+            right: 0px;
+            bottom:5px;
+            text-align: right;
+        }
+        .attr_ctrl{
+            padding: 5px;
+            font-size: 12px;
+            font-family: "微软雅黑";
+            width: 100px;
+            background: #eee;
+            border: 1px solid #000;
+            border-bottom: none;
+        }
+        #map_attr{
+            z-index: 99;
+            font-size: 12px;
+            font-family: "微软雅黑";
+            width: 176px;
+            height: 150px;
+            background: #eee;
+            position: absolute;
+            bottom: 0px;
+            right:0px;
+            border: 1px solid #000;
+            border-bottom: none;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script>
+        var map, mapCenter;
+        require([
+                    "esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/layers/FeatureLayer",
+                    "esri/layers/GraphicsLayer",
+                    "esri/graphic",
+                    "esri/geometry/Point",
+                    "esri/symbols/SimpleFillSymbol",
+                    "esri/symbols/SimpleLineSymbol",
+                    "esri/symbols/SimpleMarkerSymbol",
+                    "dojo/_base/Color",
+                    "esri/tasks/query",
+                    "esri/symbols/TextSymbol",
+                    "esri/renderers/SimpleRenderer",
+                    "esri/layers/LabelLayer",
+                    "dojo/on",
+                    "dojo/dom",
+                    "esri/dijit/OverviewMap",
+                    "dojo/domReady!"],
+                function(Map,
+                         Tiled,
+                         FeatureLayer,
+                         GraphicsLayer,
+                         Graphic,
+                         Point,
+                         SimpleFillSymbol,
+                         SimpleLineSymbol,
+                         SimpleMarkerSymbol,
+                         Color,
+                         Query,
+                         TextSymbol,
+                         SimpleRenderer,
+                         LabelLayer,
+                         on,
+                         dom,OverviewMap)
+                {
+                    map = new Map("map", {logo:false,slider: true});
+                    tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+                    map.addLayer(tiled);
+                    var overviewMapDijit = new OverviewMap({
+                        map: map,
+                        visible: true,
+                        attachTo:"bottom-right"
+                    });
+                    overviewMapDijit.startup();
+                    var labelLayer = new GraphicsLayer();
+                    map.addLayer(labelLayer,2);
+                    mapCenter = new Point(103.847, 36.0473, map.spatialReference);
+                    map.centerAndZoom(mapCenter,0);
+                    var city = new FeatureLayer("http://localhost:6080/arcgis/rest/services/china/MapServer/1");
+                    map.addLayer(city);
+                    var color = new Color("#f00");
+                    var ts = new esri.symbol.TextSymbol().setColor(color);
+                    ts.font.setSize("12pt");
+                    ts.font.setFamily("宋体");
+                    ts.setKerning(false);
+                    var renderer = new SimpleRenderer(ts);
+                    var labels = new esri.layers.LabelLayer();
+                    labels.addFeatureLayer(city, renderer, "${name}");
+                    map.addLayer(labels);
+
+                    on(dom.byId("query"), "click", function(event){
+                        map.graphics.clear();
+                        var name = dom.byId("name").value;
+                        var query = new Query();
+                        query.where = "name = '"+name+"'";
+                        city.queryFeatures(query, function(results) {
+                            var features = results.features;
+                            console.log(features);
+                            map.centerAndZoom(features[0].geometry,8);
+                            var sms = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_DIAMOND,
+                                    15,
+                                    new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                            new Color([0,0,0]),
+                                            1
+                                    ),
+                                    new Color([0,0,0])
+                            );
+                            map.graphics.add(new Graphic(features[0].geometry,sms));
+                        });
+                    });
+
+                    var draw = new esri.toolbars.Draw(map);
+                    draw.on("draw-end",addGraphicToMap);
+                    on(dom.byId("extent"), "click", function(event){
+                        map.graphics.clear();
+                        map.setMapCursor("pointer");
+                        draw.activate(esri.toolbars.Draw.EXTENT);
+                    });
+                    function addGraphicToMap(evt){
+                        map.setMapCursor("default");
+                        draw.deactivate();
+                        var sfs = new SimpleFillSymbol(SimpleFillSymbol.STYLE_SOLID,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_DASHDOT,
+                                        new Color([255,0,0]),
+                                        2
+                                ),
+                                new Color([255,255,0,0.25])
+                        );
+                        map.graphics.add(new Graphic(evt.geometry, sfs));
+                        //根据空间进行查询
+                        var query = new Query();
+                        query.geometry = evt.geometry;
+                        city.selectFeatures(query, FeatureLayer.SELECTION_NEW, function(results){
+                            console.log(results);
+                            for(var i= 0,length=results.length;i<length;i++){
+                                var sms = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE,
+                                        15,
+                                        new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                                new Color([255,0,0]),
+                                                1
+                                        ),
+                                        new Color([255,0,0,0.25])
+                                );
+                                results[i].symbol = sms;
+                                city.redraw();
+                            }
+                        });
+                        map.setExtent(evt.geometry.getExtent().expand(2));
+                    };
+                });
+    </script>
+</head>
+
+<body>
+<div id="map">
+    <div id="map_ctrl">
+        <a>城市名称：</a><input type="text" id="name" value="兰州" /><a id="query" class="button">查 询</a>
+        <a id="extent" class="button">矩 形</a>
+    </div>
+</div>
+</body>
+</html>
