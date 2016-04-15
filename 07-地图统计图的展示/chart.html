@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Simple Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css" type="text/css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .chart {
+            width:100px;
+            height:100px;
+            padding:0px !important;
+            z-index: 99;
+        }
+    </style>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script>
+        var map, statesLayer, chartLayer;
+        require([
+                    "esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/layers/FeatureLayer",
+                    "esri/geometry/Point",
+                    "dojox/charting/Chart2D",
+                    "dojox/charting/action2d/Tooltip",
+                    "dojox/charting/action2d/Highlight",
+                    "dojox/charting/themes/PlotKit/red",
+                    "dojo/domReady!"],
+                function(Map,
+                         Tiled,
+                         FeatureLayer,
+                         Point,
+                         Chart2D,
+                         Tooltip,
+                         Highlight,
+                         themes
+                ){
+                    map = new esri.Map("map",{logo:false});
+                    tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+                    map.addLayer(tiled);
+                    var mapCenter = new Point(103.847, 36.0473, map.spatialReference);
+                    map.centerAndZoom(mapCenter,1);
+
+                    map.on("load",function(){
+                        var scrpt = map.toScreen(mapCenter);
+                        addChartToMap(scrpt);
+                    });
+
+                    function addChartToMap(scrpt){
+                        var chartDiv = $("<div/>").appendTo($("#map")).css("position","absolute").addClass("chart")
+                                .attr("id","mapchart").css("left",(scrpt.x-50)+"px").css("top",(scrpt.y-50)+"px");
+                        var series=[
+                            {y: 55, text: "Male", color: "blue"},
+                            { y: 45, text: "Female", color: "red"}
+                        ];
+                        var chart = new Chart2D("mapchart");
+                        chart.addPlot("default", {
+                            type: "Pie",
+                            labels:false,
+                            maxPieSize:100
+                        });
+                        var _themes = dojox.charting.themes.PlotKit.red;
+                        _themes.chart.fill = "transparent";
+                        _themes.chart.stroke = "transparent";
+                        _themes.plotarea.fill = "transparent";
+                        chart.setTheme(_themes);
+                        chart.addSeries("chartData",series,{stroke:{color: "#ffffff",width:1}});
+                        new Highlight(chart, "default", {highlight: "lightskyblue"});
+                        new Tooltip(chart, "default");
+                        chart.render();
+
+                        map.on("pan-start",function(){
+                            chartDiv.hide();
+                        });
+                        map.on("zoom-start",function(){
+                            chartDiv.hide();
+                        });
+                        map.on("extent-change",function(){
+                            var scrpt = map.toScreen(mapCenter);
+                            chartDiv.css("left",(scrpt.x-50)+"px").css("top",(scrpt.y-50)+"px").show();
+                        });
+                    }
+                });
+    </script>
+</head>
+<body class="tundra">
+<div id="map"></div>
+</body>
+</html>

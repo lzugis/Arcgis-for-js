@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>Simple Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .chart {
+            width:100px;
+            height:100px;
+            padding:0px !important;
+        }
+    </style>
+    <script type="text/javascript">
+        var path = this.location.pathname.replace(/\/[^/]+$/, "");
+        var dojoConfig = {
+            parseOnLoad:true,
+            packages: [{
+                "name": "MapChart",
+                "location": path+"/mapchart"
+            }]
+        };
+    </script>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="data.js"></script>
+    <script>
+        var map, statesLayer, chartLayer;
+        require([
+            "esri/map",
+            "esri/layers/ArcGISTiledMapServiceLayer",
+            "esri/layers/FeatureLayer",
+            "esri/geometry/Point",
+            "esri/SpatialReference",
+            "esri/symbols/SimpleFillSymbol",
+            "esri/symbols/SimpleLineSymbol",
+            "esri/renderers/SimpleRenderer",
+            "MapChart/MapChartGraphic",
+            "MapChart/MapChartGraphicLayer",
+            "dojo/domReady!"],
+        function(Map,
+            Tiled,
+            FeatureLayer,
+            Point,
+            SpatialReference,
+            SimpleFillSymbol,
+            SimpleLineSymbol,
+            SimpleRenderer,
+            MapChartGraphic,
+            MapChartGraphicLayer
+        ){
+            map = new esri.Map("map",{logo:false});
+            tiled = new Tiled("http://localhost:6080/arcgis/rest/services/beijing/MapServer");
+            map.addLayer(tiled);
+            map.centerAndZoom(new esri.geometry.Point(116.37470305215501,40.49061415991112,{wkid:4326}),1);
+            var chartLayer = new MapChartGraphicLayer({
+                id:"chartLayer",
+                chartDiv:"map",
+                displayOnPan:false
+            });
+            map.addLayer(chartLayer);
+            map.on("load",function(){
+                dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+                for(var i= 0,dl=data.length;i<dl;i++){
+                    var series = [data[i].male, data[i].female];
+                    var chartGraphic = new MapChartGraphic({
+                        map:map,
+                        id:data[i].code,
+                        attribute:data[i],
+                        type:"Pie",
+                        series:series,
+                        sr:new SpatialReference(4326)
+                    });
+                    chartLayer.add(chartGraphic);
+                }
+            });
+        });
+    </script>
+</head>
+<body class="tundra">
+<div id="map"></div>
+</body>
+</html>
