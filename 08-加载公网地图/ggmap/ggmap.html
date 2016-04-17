@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Google Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .base-map{
+            position: absolute;
+            right: 15pt;
+            top:15pt;
+            background: #f0f0f0;
+            border: #96aed1 1px solid;
+            width: auto;
+            height: auto;
+            z-index: 99;
+            font:normal 11px "宋体",Arial;
+            color:#868686;
+        }
+        .base-map-switch{
+            padding: 4px 8px;
+            float: left;
+        }
+        .base-map-switch-active{
+            background:#e6edf1;
+            font-weight: bold;
+            color: #4d4d4d;
+        }
+        .base-map-switch:hover{
+            cursor: pointer;
+        }
+        .base-map-switch-center{
+            border: 1px #96aed1 solid;
+            border-top:none;
+            border-bottom:none;
+        }
+    </style>
+    <script type="text/javascript">
+        dojoConfig = {
+            parseOnLoad: true,
+            packages: [{
+                name: 'gglib',
+                location: this.location.pathname.replace(/\/[^/]+$/, "")+"/js/gglib"
+            }]
+        };
+    </script>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script>
+        var map,showMap;
+        require(["esri/map",
+            "gglib/GoogleTilesLayer",
+            "esri/layers/FeatureLayer",
+            "esri/geometry/Point",
+            "dojo/domReady!"],
+                function (Map,
+                          GoogleTilesLayer,
+                          FeatureLayer,
+                          Point
+                        ){
+                    map = new Map("map", { logo: false });
+                    var vec_c = new GoogleTilesLayer("vec"),//矢量
+                            img_c = new GoogleTilesLayer("img"),//影像
+                            cva_c = new GoogleTilesLayer("cva");//注记
+
+                    map.addLayer(vec_c);
+                    map.addLayer(img_c);
+                    map.addLayer(cva_c);
+                    img_c.hide();
+                    var pt = new Point(103.847, 36.0473);
+                    map.centerAndZoom(pt, 4);
+
+                    showMap = function(layer){
+                        //设置按钮样式
+                        var baseMap = ["vec","img","ter"];
+                        for(var i= 0, dl=baseMap.length;i<dl;i++){
+                            $("#"+baseMap[i]).removeClass("base-map-switch-active");
+                        }
+                        $("#"+layer).addClass("base-map-switch-active");
+                        //设置显示地图
+                        switch(layer){
+                            case "img":{//影像
+                                vec_c.hide();
+                                img_c.show();
+                                ter_c.hide();
+                                break;
+                            }
+                            case "ter":{//地形
+                                vec_c.hide();
+                                img_c.hide();
+                                ter_c.show();
+                                break;
+                            }
+                            default :{//地图
+                                vec_c.show();
+                                img_c.hide();
+                                ter_c.hide();
+                                break;
+                            }
+                        }
+                    }
+                });
+    </script>
+</head>
+<body>
+<div id="map">
+    <div class="base-map">
+        <div id="vec" class="base-map-switch base-map-switch-active" onclick="showMap('vec')">地图</div>
+        <div id="img" class="base-map-switch base-map-switch-center"  onclick="showMap('img')">影像</div>
+        <div id="ter" class="base-map-switch"  onclick="showMap('ter')">地形</div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Baidu Map</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style>
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .base-map-ano{
+            position: absolute;
+            right: 0pt;
+            top:18pt;
+            background: #e6edf1;
+            border: #96aed1 1px solid;
+            padding: 4px 5px;
+            padding-left: 0px;
+            padding-top: 0px;
+            display: none;
+            font-weight: normal;
+        }
+        .base-map{
+            position: absolute;
+            right: 15pt;
+            top:15pt;
+            background: #f0f0f0;
+            border: #96aed1 1px solid;
+            width: auto;
+            height: auto;
+            z-index: 99;
+            font:normal 11px "宋体",Arial;
+            color:#868686;
+        }
+        .base-map-switch{
+            padding: 4px 8px;
+            float: left;
+        }
+        .base-map-switch-active{
+            background:#e6edf1;
+            font-weight: bold;
+            color: #4d4d4d;
+        }
+        .base-map-switch:hover{
+            cursor: pointer;
+        }
+        .base-map-switch-center{
+            border: 1px #96aed1 solid;
+            border-top:none;
+            border-bottom:none;
+        }
+    </style>
+    <script type="text/javascript">
+        dojoConfig = {
+            parseOnLoad: true,
+            packages: [{
+                name: 'navlib',
+                location: this.location.pathname.replace(/\/[^/]+$/, "")+"/js/navlib"
+            }]
+        };
+    </script>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script>
+        var map,showMap,anoCtrl;
+        require(["esri/map",
+                    "navlib/NavTilesLayer",
+                    "esri/layers/FeatureLayer",
+                    "esri/geometry/Point",
+                    "esri/SpatialReference",
+                    "dojo/domReady!"],
+                function (Map,
+                          NavTilesLayer,
+                          FeatureLayer,
+                          Point,
+                          Sr
+                ){
+                    map = new Map("map", {
+                        logo: false
+                    });
+                    var vecMap = new NavTilesLayer("vec");//矢量
+                    var imgMap = new NavTilesLayer("img");//影像
+                    var cvaMap = new NavTilesLayer("cva");//影像标注
+                    map.addLayer(vecMap);
+					map.addLayers([imgMap,cvaMap]);
+					imgMap.hide();
+					cvaMap.hide();
+
+                    var pt = new Point(11284742.605807787, 4307435.442471091, new Sr({ wkid: 102100 }));
+                    map.centerAndZoom(pt, 4);
+
+					/*var city = new FeatureLayer("http://localhost:6080/arcgis/rest/services/china/MapServer/1",{
+                        outFields: ["*"]
+                    });
+                    map.addLayer(city);
+                    city.on("click",function(evt){
+                        var url = "http://i.tianqi.com/index.php?c=code&id=27&color=%23&bgc=%23&icon=2&py="+evt.graphic.attributes.pinyin+"&temp=1&num=1";
+                        var title = evt.graphic.attributes.name;
+                        var content = $("<div />");
+                        var weatherIframe = $("<iframe />").attr("width","400")
+                                .attr("height","270")
+                                .attr("frameborder","0")
+                                .attr("scrolling","no")
+                                .attr("src",url);
+                        content.append(weatherIframe);
+                        map.infoWindow.setTitle(title);
+                        map.infoWindow.setContent(content[0]);
+                        map.infoWindow.resize(420,275);
+                        map.infoWindow.show(evt.graphic.geometry);
+                    });*/
+
+                    showMap = function(layer){
+                        //设置按钮样式
+                        var baseMap = ["vec","img"];
+                        for(var i= 0, dl=baseMap.length;i<dl;i++){
+                            $("#"+baseMap[i]).removeClass("base-map-switch-active");
+                        }
+                        $("#"+layer).addClass("base-map-switch-active");
+                        //设置显示地图
+                        switch(layer){
+                            case "img":{//影像
+                                vecMap.hide();
+                                imgMap.show();
+                                $("#ano").show();
+                                break;
+                            }
+                            default :{//地图
+                                vecMap.show();
+                                imgMap.hide();
+                                cvaMap.hide();
+                                $("#ano").hide();
+                                $("#chkAno").attr("checked",false);
+                                break;
+                            }
+                        }
+                    };
+                    anoCtrl = function(){
+                        if($("#chkAno").attr("checked")){
+                            cvaMap.show();
+                        }
+                        else{
+                            cvaMap.hide();
+                        }
+                    }
+                });
+    </script>
+</head>
+<body>
+<div id="map">
+    <div class="base-map">
+        <div id="vec" class="base-map-switch base-map-switch-active" onclick="showMap('vec')">地图</div>
+        <div id="img" class="base-map-switch base-map-switch-center"  onclick="showMap('img')">影像
+            <div id="ano" class="base-map-ano">
+                <input id="chkAno" type="checkbox" name="chkAno" value="chkAno" onchange="anoCtrl()"/>标注
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
