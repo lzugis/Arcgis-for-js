@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title></title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <style type="text/css">
+        html, body, #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-size: 62.5%;
+            font-family:"微软雅黑";
+        }
+        .search-box{
+            z-index: 99;
+            position: absolute;
+            top: 120px;
+            left: 10px;
+        }
+        .search-box-title{
+            padding: 6px 10px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: bold;
+            color: #f2f2f2;
+            background: #85b0db;
+            border: 1px solid #85b0db;
+        }
+        .search-box-title:hover{
+            cursor: pointer;
+        }
+        #resultpanel{
+            background: #fff;
+            border: 1px solid #888888;
+            border-top: none;
+            width: 220px;
+            max-height:600px;
+            height:320px;
+            overflow-y: auto;
+        }
+        .search-panel{
+            padding: 8px 10px;
+            border-bottom:1px dotted #999;
+        }
+        .page-control{
+            position: absolute;
+            bottom: 3px;
+            padding: 3px;
+            text-align: center;
+            padding-left: 13px;
+        }
+        .page-control-btn:hover{
+            cursor: pointer;
+        }
+        .result-table{
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .result-table table tr{
+
+        }
+        .result-table table tr:hover{
+            cursor: pointer;
+            background: #ccc;
+        }
+        .result-table table tr.active{
+            background: #ccc;
+        }
+        .result-table table tr td{
+            border-bottom:1px dotted #999;
+            padding: 5px 8px;
+        }
+    </style>
+    <script type="text/javascript">
+        var path = this.location.pathname.replace(/\/[^/]+$/, "");
+        var dojoConfig = {
+            parseOnLoad:true,
+            packages: [{
+                "name": "MapCluster",
+                "location": path+"/lib"
+            }]
+        };
+    </script>
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script src="../../plugin/jquery/jquery-1.8.3.js"></script>
+    <script type="text/javascript">
+        var map;
+        var data = [];
+        var currpage = 1,pagesize=10,total = 1000;
+        var pagenum = total/pagesize;
+        if(total/pagesize!=0){
+            pagenum = parseInt(total/pagesize)+1;
+        }
+        require(["dojo/parser",
+                    "dojo/_base/array",
+                    "esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/geometry/Point",
+                    "esri/layers/GraphicsLayer",
+                    "MapCluster/ClusterLayer",
+                    "esri/graphic",
+                    "esri/symbols/SimpleMarkerSymbol",
+                    "esri/symbols/SimpleLineSymbol",
+                    "esri/symbols/SimpleFillSymbol",
+                    "esri/renderers/ClassBreaksRenderer",
+                    "dojo/_base/Color",
+                    "esri/geometry/webMercatorUtils",
+                    "dojo/domReady!"],
+                function( parser,
+                          arrayUtils,
+                          Map,
+                          Tiled,
+                          Point,
+                          GraphicsLayer,
+                          ClusterLayer,
+                          Graphic,
+                          SimpleMarkerSymbol,
+                          SimpleLineSymbol,
+                          SimpleFillSymbol,
+                          ClassBreaksRenderer,
+                          Color,
+                          webMercatorUtils)
+                {
+                    parser.parse();
+                    map = new Map("map",{logo:false});
+                    var tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+                    map.addLayer(tiled);
+                    var mapCenter = new Point(103.847, 36.0473, {"wkid":4326});
+                    map.centerAndZoom(mapCenter,1);
+                    map.on("load",function(){
+                        data = getRandomXY();
+                        addClusterLayer();
+                    });
+                    function addClusterLayer(){
+                        var clusterData  = {};
+                        clusterData.data = arrayUtils.map(data, function(item) {
+                            var latlng = new  Point(parseFloat(item.x), parseFloat(item.y), map.spatialReference);
+                            var webMercator = webMercatorUtils.geographicToWebMercator(latlng);
+                            var attributes = {
+                                "名称": item.name,
+                                "经度": item.x,
+                                "纬度": item.y
+                            };
+                            return {
+                                "x": webMercator.x,
+                                "y": webMercator.y,
+                                "attributes": attributes
+                            };
+                        });
+                        console.log(clusterData);
+                        var clusterLayer = new ClusterLayer({
+                            "data": clusterData.data,
+                            "distance": 20000000,
+                            "id": "clusters",
+                            "labelColor": "#fff",
+                            "labelOffset": -4,
+                            "resolution": map.extent.getWidth() / map.width,
+                            "singleColor": "#f00",
+                            "maxSingles":400
+                        });
+                        var defaultSym = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 5,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([255,200,0]), 1),
+                                new Color([255,200,0,1]));
+                        var renderer = new ClassBreaksRenderer(defaultSym, "clusterCount");
+                        var style1 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 10,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([255,200,0]), 1),
+                                new Color([255,200,0,0.8]));
+                        var style2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 25,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([255,125,3]), 1),
+                                new Color([255,125,3,0.8]));
+                        var style3 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 30,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([255,23,58]), 1),
+                                new Color([255,23,58,0.8]));
+                        var style4 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 35,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([204,0,184]), 1),
+                                new Color([204,0,184,0.8]));
+                        var style5 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 40,
+                                new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID,
+                                        new Color([0,0,255]), 1),
+                                new Color([0,0,255,0.8]));
+                        renderer.addBreak(0, 2, style1);
+                        renderer.addBreak(2, 50, style2);
+                        renderer.addBreak(50, 100, style3);
+                        renderer.addBreak(100, 200, style4);
+                        renderer.addBreak(200, 800, style5);
+
+                        clusterLayer.setRenderer(renderer);
+                        map.addLayer(clusterLayer);
+                        // close the info window when the map is clicked
+                        map.on("click", cleanUp);
+                        // close the info window when esc is pressed
+                        map.on("key-down", function(e) {
+                            if (e.keyCode === 27) {
+                                cleanUp();
+                            }
+                        });
+                    }
+
+                    function cleanUp() {
+                        map.infoWindow.hide();
+                        clusterLayer.clearSingles();
+                    }
+
+                    function showPointInfo(attr){
+                        var pt=new Point(attr.x,attr.y,{"wkid":4326});
+                        map.infoWindow.setTitle(attr.name);
+                        map.infoWindow.setContent(attr.attribute.desc);
+                        map.infoWindow.resize(200,80);
+                        map.infoWindow.show(pt);
+                        map.centerAndZoom(pt,0);
+                    }
+                    function getRandomXY(){
+                        var bound = map.extent;
+                        var json = new Array();
+                        for(var i=0;i<total;i++){
+                            var w = bound.xmax-bound.xmin;
+                            var h = bound.ymax-bound.ymin;
+                            var x = Math.random() * w + bound.xmin;
+                            var y = Math.random() * h + bound.ymin;
+                            json.push({
+                                name:"name"+(i+1),
+                                x:x,
+                                y:y,
+                                attribute:{
+                                    id:i,
+                                    desc:"this is the name"+(i+1)
+                                }
+                            })
+                        }
+                        return json;
+                    }
+                });
+    </script>
+</head>
+<body>
+<div id="map">
+</div>
+</body>
+</html>
