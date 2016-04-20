@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>GP TEST</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_api/library/3.9/3.9/js/esri/css/esri.css">
+    <link type="text/css" href="lib/themes/default/easyui.css" rel="stylesheet" />
+    <link type="text/css" href="lib/themes/icon.css" rel="stylesheet" />
+    <style>
+        html, body, #map {
+            height: 100%; width: 100%; margin: 0; padding: 0;
+        }
+    </style>
+
+    <script src="http://localhost/arcgis_js_api/library/3.9/3.9/init.js"></script>
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/jquery.easyui.min.js"></script>
+    <script>
+        var map, tiled, toolbar,gp;
+        dojo.require("esri.tasks.gp");
+        dojo.require("esri.toolbars.draw");
+        require(["esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "esri/geometry/Point",
+                    "esri/toolbars/draw",
+                    "dojo/domReady!"],
+                function(Map,
+                         Tiled,
+                         Point,
+                         Draw
+                ) {
+                    map = new Map("map",{logo:false});
+                    tiled = new Tiled("http://localhost:6080/arcgis/rest/services/china_chahe/MapServer");
+                    map.addLayer(tiled);
+                    var center = new Point(104.65109867642924,34.543151375838335,{wkid:4326});
+                    map.centerAndZoom(center,1);
+                    toolbar = new Draw(map);
+                    dojo.connect(toolbar, 'onDrawEnd', drawEnd);
+                    $("#point").on("click",function(){
+                        map.graphics.clear();
+                        toolbar.activate(esri.toolbars.Draw.POINT);
+                    });
+                    $("#polyline").on("click",function(){
+                        map.graphics.clear();
+                        toolbar.activate(esri.toolbars.Draw.POLYLINE);
+                    });
+                    $("#polygon").on("click",function(){
+                        map.graphics.clear();
+                        toolbar.activate(esri.toolbars.Draw.POLYGON);
+                    });
+                }
+        );
+        /**
+         * 绘制结束
+         * @param geometry
+         */
+        function drawEnd(geometry) {
+            $.messager.prompt('提示信息', '请输入缓冲区范围：', function(dist){
+                if (dist){
+                    $.messager.progress({
+                        text:"计算中，请稍后..."
+                    });
+                    toolbar.deactivate();
+                    var symbol = null;
+                    if(geometry.type==="point"){
+                        symbol = new esri.symbol.SimpleMarkerSymbol(esri.symbol.SimpleMarkerSymbol.STYLE_SQUARE, 10,
+                                new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID,
+                                        new esri.Color([255,0,0]), 1),
+                                new esri.Color([0,255,0,0.25]));
+                    }
+                    else if(geometry.type==="polyline"){
+                        symbol=new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT, new dojo.Color([255, 0, 0]), 2);
+                    }
+                    else{
+                        symbol = new esri.symbol.SimpleFillSymbol(esri.symbol.SimpleFillSymbol.STYLE_SOLID, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_DASHDOT, new dojo.Color([255, 0, 0]), 2), new dojo.Color([255, 255, 0, 0.25]));
+                    }
+                    var graphic = new esri.Graphic(geometry, symbol);
+                    map.graphics.add(graphic);
+                    tojob(graphic,dist);
+                }
+            });
+        }
+
+        function tojob(graphic,distance) {
+            //第一步构造GP
+            var gpUrl = 'http://localhost:6080/arcgis/rest/services/gp/buffer/GPServer/buffer';
+            gp = new esri.tasks.Geoprocessor(gpUrl);
+            //第二步，构造参数
+            //我们通过上面，了解到GPFeatureRecordSetLayer对应FeatureSet
+            var features = [];
+            features.push(graphic);
+            var featureset = new esri.tasks.FeatureSet();
+            featureset.features = features;
+            //构造缓冲长度，这里的单位是可以更改的，我使用的是度，简单一些
+            var Dis = new esri.tasks.LinearUnit();
+            Dis.distance = distance;
+            Dis.units = esri.Units.KILOMETERS;
+            var parms = {
+                input : featureset,
+                Distance__value_or_field_ : Dis
+            };
+            //这里函数是异步的，使用函数是submitJob,同步的使用的是execute。
+            //成功之后，调用jobResult,建议看一下这个参数。
+            gp.submitJob(parms, jobResult);
+        }
+        /**
+         * 计算完成
+         * @param result
+         */
+        function jobResult(result) {
+            var jobId = result.jobId;
+            var status = result.jobStatus;
+            if(status === esri.tasks.JobInfo.STATUS_SUCCEEDED) {
+                //成功之后，将其中的结果取出来，当然这也是参数名字。
+                //在模型中，想要取出中间结果，需要设置为模型参数
+                gp.getResultData(jobId, "output", addResults);
+            }
+        }
+        function addResults(results){
+            $.messager.progress('close');
+            var features = results.value.features;
+            if(features.length>0) {
+                for (var i = 0, length = features.length; i != length; ++i) {
+                    var feature = features[i];
+                    var polySymbolRed = new esri.symbol.SimpleFillSymbol();
+                    polySymbolRed.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0, 0.5]), 1));
+                    polySymbolRed.setColor(new dojo.Color([255, 0, 0, 0.5]));
+                    feature.setSymbol(polySymbolRed);
+                    map.graphics.add(feature);
+                }
+                $.messager.alert("提示","计算成功！");
+            }
+            else{
+                $.messager.alert("提示","计算失败！");
+            }
+        }
+    </script>
+</head>
+<body>
+<div id="map"></div>
+    <div id="gp" style="position: absolute;top: 20px;right: 20px;border: 1px solid #f00;z-index: 999;">
+        <button id="point">Point Buffer</button>
+        <button id="polyline">Polyline Buffer</button>
+        <button id="polygon">Polyline Buffer</button>
+    </div>
+</body>
+</html>

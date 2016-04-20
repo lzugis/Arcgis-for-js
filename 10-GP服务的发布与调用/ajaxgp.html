@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>GP TEST</title>
+    <link rel="stylesheet" href="http://localhost/arcgis_js_v311_api/arcgis_js_api/library/3.11/3.11/esri/css/esri.css">
+    <link type="text/css" href="lib/themes/default/easyui.css" rel="stylesheet" />
+    <link type="text/css" href="lib/themes/icon.css" rel="stylesheet" />
+    <style>
+        html, body, #map {
+            height: 100%; width: 100%; margin: 0; padding: 0;
+        }
+        .toolbar{
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            border: 1px solid #ccc;
+            z-index: 999;
+            background:#fff;
+            border-radius: 3px;
+            box-shadow: #CCCCCC 1px 1px;
+        }
+        .toolbar div{
+            margin: 3px 3px;
+        }
+        .toolbar div.point, .toolbar div.polyline,.toolbar div.polygon{
+            background: url("editing_tool_bar.png");
+            width: 25px;
+            height: 24px;
+            float: left;
+        }
+        .toolbar div.point{
+            background-position: -76px 0px;
+        }
+        .toolbar div.point:hover,.toolbar div.point.active{
+            background-position: -76px -24px;
+            cursor: pointer;
+        }
+    </style>
+
+    <script src="http://localhost/arcgis_js_v311_api/arcgis_js_api/library/3.11/3.11/init.js"></script>
+    <script type="text/javascript" src="lib/jquery.min.js"></script>
+    <script type="text/javascript" src="lib/jquery.easyui.min.js"></script>
+    <script>
+        var map, tiled, toolbar,gp;
+        
+        require(["esri/map",
+                    "esri/layers/ArcGISTiledMapServiceLayer",
+                    "dojo/domReady!"],
+                function(Map, Tiled) {
+                    map = new Map("map",{logo:false});
+                    tiled = new Tiled("http://172.24.3.163:6080/arcgis/rest/services/hx2q/img_guan/MapServer");
+                    map.addLayer(tiled);
+                    $("#calGP").on("click",function(){
+                        $.messager.progress({
+                            text:"计算中，请稍后..."
+                        });
+                        var gpUrl = 'http://172.172.9.227:6080/arcgis/rest/services/erase/GPServer/erase';
+                        $.ajax({
+                            type: "POST",
+                            cache: false,
+                            url: gpUrl+"/submitJob?f=json",
+                            async: false,
+                            success: function (result) {
+                                result = eval("("+result+")");
+                                var jobId = result.jobId;
+                                if(jobId){
+                                    submitJob(jobId);
+                                }
+                                else{
+                                    $.messager.progress('close');
+                                    $.messager.alert("提示","计算失败！");
+                                }
+                            }
+                        });
+                    });
+                }
+        );
+        function submitJob(jobId){
+            $.ajax({
+                type: "POST",
+                cache: false,
+                url: gpUrl+"/jobs/"+jobId+"?f=json",
+                async: false,
+                success: function (result1) {
+                    result1 = eval("("+result1+")");
+                    if(result1.jobStatus==="esriJobSucceeded"){
+                        showResult(jobId);
+                    }
+                    else{
+                        submitJob(jobId);
+                    }
+                }
+            });
+        }
+        function showResult(jobId){
+            $.ajax({
+                type: "POST",
+                cache: false,
+                url: gpUrl + "/jobs/" + jobId + "/results/erase_shp?f=json",
+                async: false,
+                success: function (result2) {
+                    result2 = eval("(" + result2 + ")");
+                    $.messager.progress('close');
+                    $.messager.alert("提示", "计算完成！");
+                    var features = result2.value.features;
+                    if (features.length > 0) {
+                        for (var i = 0, length = result2.length; i != length; ++i) {
+                            var feature = features[i];
+                            if(feature==undefined){
+                                return;
+                            }
+                            else {
+                                var polySymbolRed = new esri.symbol.SimpleFillSymbol();
+                                polySymbolRed.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0, 0.5]), 1));
+                                polySymbolRed.setColor(new dojo.Color([255, 0, 0, 0.5]));
+                                var g = new esri.Graphic(new esri.geometry.Polygon(feature.geometry), polySymbolRed, feature.attributes)
+                                map.graphics.add(g);
+                            }
+                        }
+
+                    }
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+<div id="map"></div>
+    <div id="gp" class="toolbar">
+        <div class="point" id="point" title="擦除计算"></div>
+    </div>
+</body>
+</html>
